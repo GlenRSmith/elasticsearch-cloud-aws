@@ -19,7 +19,6 @@
 
 package org.elasticsearch.cloud.aws.blobstore;
 
-import org.elasticsearch.common.base.Charsets;
 import org.elasticsearch.test.ElasticsearchTestCase;
 import org.junit.Test;
 
@@ -40,7 +39,7 @@ public class S3OutputStreamTest extends ElasticsearchTestCase {
     @Test
     public void testWriteLessDataThanBufferSize() throws IOException {
         MockDefaultS3OutputStream out = newS3OutputStream(BUFFER_SIZE);
-        byte[] content = randomUnicodeOfLengthBetween(1, 512).getBytes(Charsets.UTF_8);
+        byte[] content = randomUnicodeOfLengthBetween(1, 512).getBytes("UTF-8");
         copy(content, out);
 
         // Checks length & content
@@ -57,7 +56,7 @@ public class S3OutputStreamTest extends ElasticsearchTestCase {
 
     @Test
     public void testWriteSameDataThanBufferSize() throws IOException {
-        int size = randomIntBetween(BUFFER_SIZE, 10 * BUFFER_SIZE);
+        int size = randomIntBetween(BUFFER_SIZE, 2 * BUFFER_SIZE);
         MockDefaultS3OutputStream out = newS3OutputStream(size);
 
         ByteArrayOutputStream content = new ByteArrayOutputStream(size);
@@ -78,9 +77,9 @@ public class S3OutputStreamTest extends ElasticsearchTestCase {
 
     }
 
-    @Test
+    @Test @Slow
     public void testWriteExactlyNTimesMoreDataThanBufferSize() throws IOException {
-        int n = randomIntBetween(2, 10);
+        int n = randomIntBetween(2, 3);
         int length = n * BUFFER_SIZE;
         ByteArrayOutputStream content = new ByteArrayOutputStream(length);
 
@@ -105,10 +104,10 @@ public class S3OutputStreamTest extends ElasticsearchTestCase {
 
     @Test
     public void testWriteRandomNumberOfBytes() throws IOException {
-        Integer randomBufferSize = randomIntBetween(BUFFER_SIZE, 5 * BUFFER_SIZE);
+        Integer randomBufferSize = randomIntBetween(BUFFER_SIZE, 2 * BUFFER_SIZE);
         MockDefaultS3OutputStream out = newS3OutputStream(randomBufferSize);
 
-        Integer randomLength = randomIntBetween(1, 10 * BUFFER_SIZE);
+        Integer randomLength = randomIntBetween(1, 2 * BUFFER_SIZE);
         ByteArrayOutputStream content = new ByteArrayOutputStream(randomLength);
         for (int i = 0; i < randomLength; i++) {
             content.write(randomByte());

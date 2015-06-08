@@ -19,14 +19,16 @@
 
 package org.elasticsearch.cloud.aws;
 
+import java.util.Locale;
+
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.Protocol;
 import com.amazonaws.auth.*;
 import com.amazonaws.internal.StaticCredentialsProvider;
 import com.amazonaws.services.ec2.AmazonEC2;
 import com.amazonaws.services.ec2.AmazonEC2Client;
+
 import org.elasticsearch.ElasticsearchException;
-import org.elasticsearch.ElasticsearchIllegalArgumentException;
 import org.elasticsearch.cloud.aws.network.Ec2NameResolver;
 import org.elasticsearch.cloud.aws.node.Ec2CustomNodeAttributes;
 import org.elasticsearch.cluster.node.DiscoveryNodeService;
@@ -48,7 +50,10 @@ public class AwsEc2Service extends AbstractLifecycleComponent<AwsEc2Service> {
     @Inject
     public AwsEc2Service(Settings settings, SettingsFilter settingsFilter, NetworkService networkService, DiscoveryNodeService discoveryNodeService) {
         super(settings);
-        settingsFilter.addFilter(new AwsSettingsFilter());
+        settingsFilter.addFilter("cloud.key");
+        settingsFilter.addFilter("cloud.account");
+        settingsFilter.addFilter("cloud.aws.access_key");
+        settingsFilter.addFilter("cloud.aws.secret_key");
         // add specific ec2 name resolver
         networkService.addCustomNameResolver(new Ec2NameResolver(settings));
         discoveryNodeService.addCustomAttributeProvider(new Ec2CustomNodeAttributes(settings));
@@ -60,28 +65,44 @@ public class AwsEc2Service extends AbstractLifecycleComponent<AwsEc2Service> {
         }
 
         ClientConfiguration clientConfiguration = new ClientConfiguration();
-        String protocol = componentSettings.get("protocol", "https").toLowerCase();
-        protocol = componentSettings.get("ec2.protocol", protocol).toLowerCase();
+        // the response metadata cache is only there for diagnostics purposes,
+        // but can force objects from every response to the old generation.
+        clientConfiguration.setResponseMetadataCacheSize(0);
+        String protocol = settings.get("cloud.aws.protocol", "https").toLowerCase(Locale.ROOT);
+        protocol = settings.get("cloud.aws.ec2.protocol", protocol).toLowerCase(Locale.ROOT);
         if ("http".equals(protocol)) {
             clientConfiguration.setProtocol(Protocol.HTTP);
         } else if ("https".equals(protocol)) {
             clientConfiguration.setProtocol(Protocol.HTTPS);
         } else {
-            throw new ElasticsearchIllegalArgumentException("No protocol supported [" + protocol + "], can either be [http] or [https]");
+            throw new IllegalArgumentException("No protocol supported [" + protocol + "], can either be [http] or [https]");
         }
-        String account = componentSettings.get("access_key", settings.get("cloud.account"));
-        String key = componentSettings.get("secret_key", settings.get("cloud.key"));
+        String account = settings.get("cloud.aws.access_key", settings.get("cloud.account"));
+        String key = settings.get("cloud.aws.secret_key", settings.get("cloud.key"));
 
-        String proxyHost = componentSettings.get("proxy_host");
+        String proxyHost = settings.get("cloud.aws.proxy_host");
+        proxyHost = settings.get("cloud.aws.ec2.proxy_host", proxyHost);
         if (proxyHost != null) {
-            String portString = componentSettings.get("proxy_port", "80");
+            String portString = settings.get("cloud.aws.proxy_port", "80");
+            portString = settings.get("cloud.aws.ec2.proxy_port", portString);
             Integer proxyPort;
             try {
                 proxyPort = Integer.parseInt(portString, 10);
             } catch (NumberFormatException ex) {
-                throw new ElasticsearchIllegalArgumentException("The configured proxy port value [" + portString + "] is invalid", ex);
+                throw new IllegalArgumentException("The configured proxy port value [" + portString + "] is invalid", ex);
             }
             clientConfiguration.withProxyHost(proxyHost).setProxyPort(proxyPort);
+        }
+
+        // #155: we might have 3rd party users using older EC2 API version
+        String awsSigner = settings.get("cloud.aws.ec2.signer", settings.get("cloud.aws.signer"));
+        if (awsSigner != null) {
+            logger.debug("using AWS API signer [{}]", awsSigner);
+            try {
+                AwsSigner.configureSigner(awsSigner, clientConfiguration);
+            } catch (IllegalArgumentException e) {
+                logger.warn("wrong signer set for [cloud.aws.ec2.signer] or [cloud.aws.signer]: [{}]", awsSigner);
+            }
         }
 
         AWSCredentialsProvider credentials;
@@ -100,12 +121,12 @@ public class AwsEc2Service extends AbstractLifecycleComponent<AwsEc2Service> {
 
         this.client = new AmazonEC2Client(credentials, clientConfiguration);
 
-        if (componentSettings.get("ec2.endpoint") != null) {
-            String endpoint = componentSettings.get("ec2.endpoint");
+        if (settings.get("cloud.aws.ec2.endpoint") != null) {
+            String endpoint = settings.get("cloud.aws.ec2.endpoint");
             logger.debug("using explicit ec2 endpoint [{}]", endpoint);
             client.setEndpoint(endpoint);
-        } else if (componentSettings.get("region") != null) {
-            String region = componentSettings.get("region").toLowerCase();
+        } else if (settings.get("cloud.aws.region") != null) {
+            String region = settings.get("cloud.aws.region").toLowerCase(Locale.ROOT);
             String endpoint;
             if (region.equals("us-east-1") || region.equals("us-east")) {
                 endpoint = "ec2.us-east-1.amazonaws.com";
@@ -126,9 +147,9 @@ public class AwsEc2Service extends AbstractLifecycleComponent<AwsEc2Service> {
             } else if (region.equals("sa-east") || region.equals("sa-east-1")) {
                 endpoint = "ec2.sa-east-1.amazonaws.com";
             } else if (region.equals("cn-north") || region.equals("cn-north-1")) {
-                endpoint = "ec2.cn-north-1.amazonaws.com";
+                endpoint = "ec2.cn-north-1.amazonaws.com.cn";
             } else {
-                throw new ElasticsearchIllegalArgumentException("No automatic endpoint could be derived from region [" + region + "]");
+                throw new IllegalArgumentException("No automatic endpoint could be derived from region [" + region + "]");
             }
             if (endpoint != null) {
                 logger.debug("using ec2 region [{}], with endpoint [{}]", region, endpoint);

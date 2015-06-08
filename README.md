@@ -7,7 +7,7 @@ for the unicast discovery mechanism and add S3 repositories.
 In order to install the plugin, run: 
 
 ```sh
-bin/plugin install elasticsearch/elasticsearch-cloud-aws/2.4.1
+bin/plugin install elasticsearch/elasticsearch-cloud-aws/2.5.1
 ```
 
 You need to install a version matching your Elasticsearch version:
@@ -15,8 +15,9 @@ You need to install a version matching your Elasticsearch version:
 |       Elasticsearch    |  AWS Cloud Plugin |                                                             Docs                                                                   |
 |------------------------|-------------------|------------------------------------------------------------------------------------------------------------------------------------|
 |    master              | Build from source | See below                                                                                                                          |
-|    es-1.x              | Build from source | [2.5.0-SNAPSHOT](https://github.com/elasticsearch/elasticsearch-cloud-aws/tree/es-1.x/#version-250-snapshot-for-elasticsearch-1x)  |
-|    es-1.4              |     2.4.1         | [2.4.1](https://github.com/elasticsearch/elasticsearch-cloud-aws/tree/v2.4.1/#version-241-for-elasticsearch-14)                  |
+|    es-1.x              | Build from source | [2.6.0-SNAPSHOT](https://github.com/elasticsearch/elasticsearch-cloud-aws/tree/es-1.x/#version-260-snapshot-for-elasticsearch-1x)  |
+|    es-1.5              |     2.5.1         | [2.5.1](https://github.com/elastic/elasticsearch-cloud-aws/tree/v2.5.1/#version-251-for-elasticsearch-15)                  |
+|    es-1.4              |     2.4.2         | [2.4.2](https://github.com/elasticsearch/elasticsearch-cloud-aws/tree/v2.4.2/#version-242-for-elasticsearch-14)                  |
 |    es-1.3              |     2.3.0         | [2.3.0](https://github.com/elasticsearch/elasticsearch-cloud-aws/tree/v2.3.0/#version-230-for-elasticsearch-13)                    |
 |    es-1.2              |     2.2.0         | [2.2.0](https://github.com/elasticsearch/elasticsearch-cloud-aws/tree/v2.2.0/#aws-cloud-plugin-for-elasticsearch)                  |
 |    es-1.1              |     2.1.1         | [2.1.1](https://github.com/elasticsearch/elasticsearch-cloud-aws/tree/v2.1.1/#aws-cloud-plugin-for-elasticsearch)                  |
@@ -70,6 +71,18 @@ cloud:
         proxy_port: 8083
 ```
 
+You can also set different proxies for `ec2` and `s3`:
+
+```
+cloud:
+    aws:
+        s3:
+            proxy_host: proxy1.company.com
+            proxy_port: 8083
+        ec2:
+            proxy_host: proxy2.company.com
+            proxy_port: 8083
+```
 
 ### Region
 
@@ -87,6 +100,14 @@ The `cloud.aws.region` can be set to a region and will automatically use the rel
 * `eu-central` (`eu-central-1`)
 * `sa-east` (`sa-east-1`)
 * `cn-north` (`cn-north-1`)
+
+
+### EC2/S3 Signer API
+
+If you are using a compatible EC2 or S3 service, they might be using an older API to sign the requests.
+You can set your compatible signer API using `cloud.aws.signer` (or `cloud.aws.ec2.signer` and `cloud.aws.s3.signer`)
+with the right signer to use. Defaults to `AWS4SignerType`.
+
 
 ## EC2 Discovery
 
@@ -189,7 +210,10 @@ In order to restrict the Elasticsearch snapshot process to the minimum required 
     "Statement": [
         {
             "Action": [
-                "s3:ListBucket"
+                "s3:ListBucket",
+                "s3:GetBucketLocation",
+                "s3:ListBucketMultipartUploads",
+                "s3:ListBucketVersions"
             ],
             "Effect": "Allow",
             "Resource": [
@@ -200,7 +224,9 @@ In order to restrict the Elasticsearch snapshot process to the minimum required 
             "Action": [
                 "s3:GetObject",
                 "s3:PutObject",
-                "s3:DeleteObject"
+                "s3:DeleteObject",
+                "s3:AbortMultipartUpload",
+                "s3:ListMultipartUploadParts"
             ],
             "Effect": "Allow",
             "Resource": [
@@ -210,7 +236,6 @@ In order to restrict the Elasticsearch snapshot process to the minimum required 
     ],
     "Version": "2012-10-17"
 }
-
 ```
 
 You may further restrict the permissions by specifying a prefix within the bucket, in this example, named "foo".
@@ -220,7 +245,10 @@ You may further restrict the permissions by specifying a prefix within the bucke
     "Statement": [
         {
             "Action": [
-                "s3:ListBucket"
+                "s3:ListBucket",
+                "s3:GetBucketLocation",
+                "s3:ListBucketMultipartUploads",
+                "s3:ListBucketVersions"
             ],
             "Condition": {
                 "StringLike": {
@@ -238,7 +266,9 @@ You may further restrict the permissions by specifying a prefix within the bucke
             "Action": [
                 "s3:GetObject",
                 "s3:PutObject",
-                "s3:DeleteObject"
+                "s3:DeleteObject",
+                "s3:AbortMultipartUpload",
+                "s3:ListMultipartUploadParts"
             ],
             "Effect": "Allow",
             "Resource": [
@@ -248,7 +278,6 @@ You may further restrict the permissions by specifying a prefix within the bucke
     ],
     "Version": "2012-10-17"
 }
-
 ```
 
 The bucket needs to exist to register a repository for snapshots. If you did not create the bucket then the repository registration will fail. If you want elasticsearch to create the bucket instead, you can add the permission to create a specific bucket like this:
@@ -290,7 +319,7 @@ repositories:
         private-bucket:
             bucket: <bucket not accessible by default key>
             access_key: <access key>
-            secret_key: <access key>
+            secret_key: <secret key>
         remote-bucket:
             bucket: <bucket in other region>
             region: <region>

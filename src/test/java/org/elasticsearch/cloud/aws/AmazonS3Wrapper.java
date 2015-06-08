@@ -1,11 +1,11 @@
 /*
- * Licensed to Elasticsearch (the "Author") under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership. Author licenses this
- * file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+ * Licensed to Elasticsearch under one or more contributor
+ * license agreements. See the NOTICE file distributed with
+ * this work for additional information regarding copyright
+ * ownership. Elasticsearch licenses this file to you under
+ * the Apache License, Version 2.0 (the "License"); you may
+ * not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
  *    http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -35,9 +35,12 @@ import java.net.URL;
 import java.util.Date;
 import java.util.List;
 
+import org.elasticsearch.common.SuppressForbidden;
+
 /**
  *
  */
+@SuppressForbidden(reason = "implements AWS api that uses java.io.File!")
 public class AmazonS3Wrapper implements AmazonS3 {
 
     protected AmazonS3 delegate;
@@ -193,6 +196,11 @@ public class AmazonS3Wrapper implements AmazonS3 {
     }
 
     @Override
+    public void setObjectAcl(SetObjectAclRequest setObjectAclRequest) throws AmazonClientException, AmazonServiceException {
+        delegate.setObjectAcl(setObjectAclRequest);
+    }
+
+    @Override
     public AccessControlList getBucketAcl(String bucketName) throws AmazonClientException, AmazonServiceException {
         return delegate.getBucketAcl(bucketName);
     }
@@ -250,6 +258,26 @@ public class AmazonS3Wrapper implements AmazonS3 {
     @Override
     public void deleteBucket(String bucketName) throws AmazonClientException, AmazonServiceException {
         delegate.deleteBucket(bucketName);
+    }
+
+    @Override
+    public void setBucketReplicationConfiguration(String bucketName, BucketReplicationConfiguration configuration) throws AmazonServiceException, AmazonClientException {
+        delegate.setBucketReplicationConfiguration(bucketName, configuration);
+    }
+
+    @Override
+    public void setBucketReplicationConfiguration(SetBucketReplicationConfigurationRequest setBucketReplicationConfigurationRequest) throws AmazonServiceException, AmazonClientException {
+        delegate.setBucketReplicationConfiguration(setBucketReplicationConfigurationRequest);
+    }
+
+    @Override
+    public BucketReplicationConfiguration getBucketReplicationConfiguration(String bucketName) throws AmazonServiceException, AmazonClientException {
+        return delegate.getBucketReplicationConfiguration(bucketName);
+    }
+
+    @Override
+    public void deleteBucketReplicationConfiguration(String bucketName) throws AmazonServiceException, AmazonClientException {
+        delegate.deleteBucketReplicationConfiguration(bucketName);
     }
 
     @Override

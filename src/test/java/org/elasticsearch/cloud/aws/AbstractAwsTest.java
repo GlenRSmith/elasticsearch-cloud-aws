@@ -1,11 +1,11 @@
 /*
- * Licensed to Elasticsearch (the "Author") under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership. Author licenses this
- * file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+ * Licensed to Elasticsearch under one or more contributor
+ * license agreements. See the NOTICE file distributed with
+ * this work for additional information regarding copyright
+ * ownership. Elasticsearch licenses this file to you under
+ * the Apache License, Version 2.0 (the "License"); you may
+ * not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
  *    http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -20,13 +20,14 @@
 package org.elasticsearch.cloud.aws;
 
 import com.carrotsearch.randomizedtesting.annotations.TestGroup;
+
 import org.elasticsearch.common.Strings;
-import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.env.Environment;
 import org.elasticsearch.env.FailedToResolveConfigException;
 import org.elasticsearch.plugins.PluginsService;
 import org.elasticsearch.test.ElasticsearchIntegrationTest;
+import org.elasticsearch.test.ElasticsearchIntegrationTest.ThirdParty;
 import org.junit.After;
 import org.junit.Before;
 
@@ -38,8 +39,12 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- *
+ * Base class for AWS tests that require credentials.
+ * <p>
+ * You must specify {@code -Dtests.thirdparty=true -Dtests.config=/path/to/config}
+ * in order to run these tests.
  */
+@ThirdParty
 public abstract class AbstractAwsTest extends ElasticsearchIntegrationTest {
 
     /**
@@ -71,43 +76,28 @@ public abstract class AbstractAwsTest extends ElasticsearchIntegrationTest {
         }
     }
 
-
-    /**
-     * Annotation for tests that require AWS to run. AWS tests are disabled by default.
-     * Look at README file for details on how to run tests
-     */
-    @Documented
-    @Inherited
-    @Retention(RetentionPolicy.RUNTIME)
-    @TestGroup(enabled = false, sysProperty = SYSPROP_AWS)
-    public @interface AwsTest {
-    }
-
-    /**
-     */
-    public static final String SYSPROP_AWS = "tests.aws";
-
     @Override
     protected Settings nodeSettings(int nodeOrdinal) {
-                ImmutableSettings.Builder settings = ImmutableSettings.builder()
+                Settings.Builder settings = Settings.builder()
                 .put(super.nodeSettings(nodeOrdinal))
+                .put("path.home", createTempDir())
                 .put("plugins." + PluginsService.LOAD_PLUGIN_FROM_CLASSPATH, true)
                 .put(AwsModule.S3_SERVICE_TYPE_KEY, TestAwsS3Service.class)
                 .put("cloud.aws.test.random", randomInt())
                 .put("cloud.aws.test.write_failures", 0.1)
                 .put("cloud.aws.test.read_failures", 0.1);
 
-        Environment environment = new Environment();
+        Environment environment = new Environment(settings.build());
 
         // if explicit, just load it and don't load from env
         try {
             if (Strings.hasText(System.getProperty("tests.config"))) {
                 settings.loadFromUrl(environment.resolveConfig(System.getProperty("tests.config")));
             } else {
-                fail("to run integration tests, you need to set -Dtest.aws=true and -Dtests.config=/path/to/elasticsearch.yml");
+                throw new IllegalStateException("to run integration tests, you need to set -Dtest.thirdparty=true and -Dtests.config=/path/to/elasticsearch.yml");
             }
         } catch (FailedToResolveConfigException exception) {
-            fail("your test configuration file is incorrect: " + System.getProperty("tests.config"));
+            throw new IllegalStateException("your test configuration file is incorrect: " + System.getProperty("tests.config"), exception);
         }
         return settings.build();
     }

@@ -1,11 +1,11 @@
 /*
- * Licensed to Elasticsearch (the "Author") under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership. Author licenses this
- * file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+ * Licensed to Elasticsearch under one or more contributor
+ * license agreements. See the NOTICE file distributed with
+ * this work for additional information regarding copyright
+ * ownership. Elasticsearch licenses this file to you under
+ * the Apache License, Version 2.0 (the "License"); you may
+ * not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
  *    http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -64,11 +64,11 @@ public class TestAmazonS3 extends AmazonS3Wrapper {
         return 1;
     }
 
-    public TestAmazonS3(AmazonS3 delegate, Settings componentSettings) {
+    public TestAmazonS3(AmazonS3 delegate, Settings settings) {
         super(delegate);
-        randomPrefix = componentSettings.get("test.random");
-        writeFailureRate = componentSettings.getAsDouble("test.write_failures", 0.0);
-        readFailureRate = componentSettings.getAsDouble("test.read_failures", 0.0);
+        randomPrefix = settings.get("cloud.aws.test.random");
+        writeFailureRate = settings.getAsDouble("cloud.aws.test.write_failures", 0.0);
+        readFailureRate = settings.getAsDouble("cloud.aws.test.read_failures", 0.0);
     }
 
     @Override

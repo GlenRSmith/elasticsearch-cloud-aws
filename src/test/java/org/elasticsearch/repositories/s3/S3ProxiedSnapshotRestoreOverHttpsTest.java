@@ -17,21 +17,31 @@
  * under the License.
  */
 
-package org.elasticsearch.cloud.aws;
+package org.elasticsearch.repositories.s3;
 
-import org.elasticsearch.common.settings.ImmutableSettings;
-import org.elasticsearch.common.settings.SettingsFilter;
+import org.elasticsearch.common.settings.Settings;
+import org.junit.Before;
 
 /**
- *
+ * This will only run if you define in your `elasticsearch.yml` file a s3 specific proxy
+ * cloud.aws.s3.proxy_host: mys3proxy.company.com
+ * cloud.aws.s3.proxy_port: 8080
  */
-public class AwsSettingsFilter implements SettingsFilter.Filter {
+public class S3ProxiedSnapshotRestoreOverHttpsTest extends AbstractS3SnapshotRestoreTest {
+
+    private boolean proxySet = false;
 
     @Override
-    public void filter(ImmutableSettings.Builder settings) {
-        settings.remove("cloud.key");
-        settings.remove("cloud.account");
-        settings.remove("cloud.aws.access_key");
-        settings.remove("cloud.aws.secret_key");
+    public Settings nodeSettings(int nodeOrdinal) {
+        Settings settings = super.nodeSettings(nodeOrdinal);
+        String proxyHost = settings.get("cloud.aws.s3.proxy_host");
+        proxySet = proxyHost != null;
+        return settings;
     }
+
+    @Before
+    public void checkProxySettings() {
+        assumeTrue("we are expecting proxy settings in elasticsearch.yml file", proxySet);
+    }
+
 }

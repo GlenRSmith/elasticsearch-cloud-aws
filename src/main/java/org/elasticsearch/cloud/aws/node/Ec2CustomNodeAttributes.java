@@ -23,7 +23,6 @@ import org.apache.lucene.util.IOUtils;
 import org.elasticsearch.ExceptionsHelper;
 import org.elasticsearch.cloud.aws.AwsEc2Service;
 import org.elasticsearch.cluster.node.DiscoveryNodeService;
-import org.elasticsearch.common.collect.Maps;
 import org.elasticsearch.common.component.AbstractComponent;
 import org.elasticsearch.common.settings.Settings;
 
@@ -33,6 +32,8 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.net.URLConnection;
+import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -48,7 +49,7 @@ public class Ec2CustomNodeAttributes extends AbstractComponent implements Discov
         if (!settings.getAsBoolean("cloud.node.auto_attributes", false)) {
             return null;
         }
-        Map<String, String> ec2Attributes = Maps.newHashMap();
+        Map<String, String> ec2Attributes = new HashMap<>();
 
         URLConnection urlConnection;
         InputStream in = null;
@@ -58,7 +59,7 @@ public class Ec2CustomNodeAttributes extends AbstractComponent implements Discov
             urlConnection = url.openConnection();
             urlConnection.setConnectTimeout(2000);
             in = urlConnection.getInputStream();
-            BufferedReader urlReader = new BufferedReader(new InputStreamReader(in));
+            BufferedReader urlReader = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8));
 
             String metadataResult = urlReader.readLine();
             if (metadataResult == null || metadataResult.length() == 0) {

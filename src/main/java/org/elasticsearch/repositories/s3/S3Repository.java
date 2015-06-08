@@ -1,11 +1,11 @@
 /*
- * Licensed to ElasticSearch and Shay Banon under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership. ElasticSearch licenses this
- * file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+ * Licensed to Elasticsearch under one or more contributor
+ * license agreements. See the NOTICE file distributed with
+ * this work for additional information regarding copyright
+ * ownership. Elasticsearch licenses this file to you under
+ * the Apache License, Version 2.0 (the "License"); you may
+ * not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
  *    http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -74,66 +74,50 @@ public class S3Repository extends BlobStoreRepository {
     public S3Repository(RepositoryName name, RepositorySettings repositorySettings, IndexShardRepository indexShardRepository, AwsS3Service s3Service) throws IOException {
         super(name.getName(), repositorySettings, indexShardRepository);
 
-        String bucket = repositorySettings.settings().get("bucket", componentSettings.get("bucket"));
+        String bucket = repositorySettings.settings().get("bucket", settings.get("repositories.s3.bucket"));
         if (bucket == null) {
             throw new RepositoryException(name.name(), "No bucket defined for s3 gateway");
         }
 
-        String endpoint = repositorySettings.settings().get("endpoint", componentSettings.get("endpoint"));
-        String protocol = repositorySettings.settings().get("protocol", componentSettings.get("protocol"));
+        String endpoint = repositorySettings.settings().get("endpoint", settings.get("repositories.s3.endpoint"));
+        String protocol = repositorySettings.settings().get("protocol", settings.get("repositories.s3.protocol"));
 
-        String region = repositorySettings.settings().get("region", componentSettings.get("region"));
+        String region = repositorySettings.settings().get("region", settings.get("repositories.s3.region"));
         if (region == null) {
             // Bucket setting is not set - use global region setting
             String regionSetting = repositorySettings.settings().get("cloud.aws.region", settings.get("cloud.aws.region"));
             if (regionSetting != null) {
                 regionSetting = regionSetting.toLowerCase(Locale.ENGLISH);
-                if ("us-east".equals(regionSetting)) {
+                if ("us-east".equals(regionSetting) || "us-east-1".equals(regionSetting)) {
                     // Default bucket - setting region to null
                     region = null;
-                } else if ("us-east-1".equals(regionSetting)) {
-                    region = null;
-                } else if ("us-west".equals(regionSetting)) {
-                    region = "us-west-1";
-                } else if ("us-west-1".equals(regionSetting)) {
+                } else if ("us-west".equals(regionSetting) || "us-west-1".equals(regionSetting)) {
                     region = "us-west-1";
                 } else if ("us-west-2".equals(regionSetting)) {
                     region = "us-west-2";
-                } else if ("ap-southeast".equals(regionSetting)) {
-                    region = "ap-southeast-1";
-                } else if ("ap-southeast-1".equals(regionSetting)) {
+                } else if ("ap-southeast".equals(regionSetting) || "ap-southeast-1".equals(regionSetting)) {
                     region = "ap-southeast-1";
                 } else if ("ap-southeast-2".equals(regionSetting)) {
                     region = "ap-southeast-2";
-                } else if ("ap-northeast".equals(regionSetting)) {
+                } else if ("ap-northeast".equals(regionSetting) || "ap-northeast-1".equals(regionSetting)) {
                     region = "ap-northeast-1";
-                } else if ("ap-northeast-1".equals(regionSetting)) {
-                    region = "ap-northeast-1";
-                } else if ("eu-west".equals(regionSetting)) {
-                    region = "EU";
-                } else if ("eu-west-1".equals(regionSetting)) {
-                    region = "EU";
-                } else if ("eu-central".equals(regionSetting)) {
+                } else if ("eu-west".equals(regionSetting) || "eu-west-1".equals(regionSetting)) {
+                    region = "eu-west-1";
+                } else if ("eu-central".equals(regionSetting) || "eu-central-1".equals(regionSetting)) {
                     region = "eu-central-1";
-                } else if ("eu-central-1".equals(regionSetting)) {
-                    region = "eu-central-1";
-                } else if ("sa-east".equals(regionSetting)) {
+                } else if ("sa-east".equals(regionSetting) || "sa-east-1".equals(regionSetting)) {
                     region = "sa-east-1";
-                } else if ("sa-east-1".equals(regionSetting)) {
-                    region = "sa-east-1";
-                } else if ("cn-north".equals(regionSetting)) {
-                    region = "cn-north-1";
-                } else if ("cn-north-1".equals(regionSetting)) {
+                } else if ("cn-north".equals(regionSetting) || "cn-north-1".equals(regionSetting)) {
                     region = "cn-north-1";
                 }
             }
         }
 
-        boolean serverSideEncryption = repositorySettings.settings().getAsBoolean("server_side_encryption", componentSettings.getAsBoolean("server_side_encryption", false));
-        ByteSizeValue bufferSize = repositorySettings.settings().getAsBytesSize("buffer_size", componentSettings.getAsBytesSize("buffer_size", null));
-        Integer maxRetries = repositorySettings.settings().getAsInt("max_retries", componentSettings.getAsInt("max_retries", 3));
-        this.chunkSize = repositorySettings.settings().getAsBytesSize("chunk_size", componentSettings.getAsBytesSize("chunk_size", new ByteSizeValue(100, ByteSizeUnit.MB)));
-        this.compress = repositorySettings.settings().getAsBoolean("compress", componentSettings.getAsBoolean("compress", false));
+        boolean serverSideEncryption = repositorySettings.settings().getAsBoolean("server_side_encryption", settings.getAsBoolean("repositories.s3.server_side_encryption", false));
+        ByteSizeValue bufferSize = repositorySettings.settings().getAsBytesSize("buffer_size", settings.getAsBytesSize("repositories.s3.buffer_size", null));
+        Integer maxRetries = repositorySettings.settings().getAsInt("max_retries", settings.getAsInt("repositories.s3.max_retries", 3));
+        this.chunkSize = repositorySettings.settings().getAsBytesSize("chunk_size", settings.getAsBytesSize("repositories.s3.chunk_size", new ByteSizeValue(100, ByteSizeUnit.MB)));
+        this.compress = repositorySettings.settings().getAsBoolean("compress", settings.getAsBoolean("repositories.s3.compress", false));
 
         logger.debug("using bucket [{}], region [{}], endpoint [{}], protocol [{}], chunk_size [{}], server_side_encryption [{}], buffer_size [{}], max_retries [{}]",
                 bucket, region, endpoint, protocol, chunkSize, serverSideEncryption, bufferSize, maxRetries);
